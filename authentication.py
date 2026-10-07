@@ -1,84 +1,103 @@
-from flask import Flask, request, jsonify
+from flask import request, jsonify
 from pydantic import BaseModel,EmailStr,ValidationError
+from app import app
 from db import get_connection
 from werkzeug.security import generate_password_hash, check_password_hash
-from dotenv import load_dotenv
 import os
 import jwt
+from auth_utils import token_required
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-load_dotenv()
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
-app = Flask(__name__)
-
 class UserCreation(BaseModel):
+    employee_id: int
     email: EmailStr
     password: str
-
-
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-
-        auth_header = request.headers.get('Authorization')
-
-        if not auth_header:
-            return jsonify({
-                'message': 'Authorization header is missing'
-            }), 401
-
-        try:
-            token = auth_header.split(' ')[1]
-
-            decoded_token = jwt.decode(
-                token,
-                SECRET_KEY,
-                algorithms=['HS256']
-            )
-
-            employee_id = decoded_token['employee_id']
-
-        except jwt.ExpiredSignatureError:
-            return jsonify({
-                'message': 'Token has expired'
-            }), 401
-
-        except (jwt.InvalidTokenError, IndexError, KeyError):
-            return jsonify({
-                'message': 'Invalid token'
-            }), 401
-
-        return f(employee_id, *args, **kwargs)
-
-    return decorated
 
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    INSERT_USER_QUERY = "INSERT INTO users (employee_id, email, password) VALUES (%s, %s, %s)"
-    SELECT_USER_QUERY = "SELECT employee_id FROM users WHERE email = %s"
+
+    INSERT_USER_QUERY = """
+        INSERT INTO users (employee_id, email, password)
+        VALUES (%s, %s, %s)
+    """
+
+    SELECT_USER_QUERY = """
+        SELECT employee_id
+        FROM users
+        WHERE email = %s
+    """
+
+    SELECT_EMPLOYEE_QUERY = """
+        SELECT employee_id
+        FROM employees
+        WHERE employee_id = %s
+    """
 
     try:
         user_data = UserCreation(**data)
+
         conn = get_connection()
         cursor = conn.cursor()
+
+        # Check if email already exists
         cursor.execute(SELECT_USER_QUERY, (user_data.email,))
         existing_user = cursor.fetchone()
+
         if existing_user:
             cursor.close()
             conn.close()
-            return jsonify({'message': 'User with this email already exists'}), 400
-        hashed_password = generate_password_hash(user_data.password)
-        cursor.execute(INSERT_USER_QUERY, (user_data.email, hashed_password))
+            return jsonify({
+                'message': 'User with this email already exists'
+            }), 400
+
+        # Check if employee ID exists
+        cursor.execute(
+            SELECT_EMPLOYEE_QUERY,
+            (user_data.employee_id,)
+        )
+
+        employee = cursor.fetchone()
+
+        if not employee:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'message': 'Invalid employee ID'
+            }), 400
+
+        # Hash password
+        hashed_password = generate_password_hash(
+            user_data.password
+        )
+
+        # Create user
+        cursor.execute(
+            INSERT_USER_QUERY,
+            (
+                user_data.employee_id,
+                user_data.email,
+                hashed_password
+            )
+        )
+
         conn.commit()
+
         cursor.close()
         conn.close()
-        return jsonify({'message': 'User registered successfully'}), 201
-    except ValidationError as e:
-        return jsonify({'errors': e.errors()}), 400
 
+        return jsonify({
+            'message': 'User registered successfully'
+        }), 201
+
+    except ValidationError as e:
+        return jsonify({
+            'errors': e.errors()
+        }), 400
+    
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -100,41 +119,34 @@ def login():
 
 @app.route('/profile', methods=['GET'])
 @token_required
-def get_profile():
-    auth_header = request.headers.get('Authorization')
+def get_profile(employee_id):
 
-    if not auth_header:
-        return jsonify({'message': 'Authorization header is missing'}), 401
+    SELECT_USER_QUERY = """
+        SELECT employee_id, email
+        FROM users
+        WHERE employee_id = %s
+    """
 
-    token = auth_header.split(' ')[1]
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    try:
-        decoded_token = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=['HS256']
-        )
-        SELECT_USER_QUERY = "SELECT id, name, email FROM users WHERE id = %s"
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(SELECT_USER_QUERY,(decoded_token['user_id'],))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
+    cursor.execute(
+        SELECT_USER_QUERY,
+        (employee_id,)
+    )
 
+    user = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if not user:
         return jsonify({
-            'user_id': user[0],
-            'name' : user[1],
-            'email':user[2],
-            'message': 'Token is valid',
-        }), 200
+            'message': 'User not found'
+        }), 404
 
-    except jwt.ExpiredSignatureError:
-        return jsonify({'message': 'Token has expired'}), 401
-
-    except jwt.InvalidTokenError:
-        return jsonify({'message': 'Invalid token'}), 401
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    return jsonify({
+        'employee_id': user[0],
+        'email': user[1],
+        'message': 'Token is valid'
+    }), 200

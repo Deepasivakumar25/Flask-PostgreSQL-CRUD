@@ -1,28 +1,8 @@
-from flask import Flask, request, jsonify
-from pydantic import BaseModel, EmailStr, ValidationError
+from flask import request, jsonify
+from pydantic import BaseModel, ValidationError
 from db import get_connection
-from authentication import token_required
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.engine import URL
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-app = Flask(__name__)
-
-database_url = URL.create(
-    drivername="postgresql+psycopg",
-    username=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST"),
-    port=int(os.getenv("DB_PORT")),
-    database=os.getenv("DB_NAME")
-)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-
-db = SQLAlchemy(app)
+from auth_utils import token_required
+from app import app, db
 
 
 class ProductCreation(BaseModel):
@@ -283,7 +263,4 @@ def get_department(employee_id, department_id):
             for employee in department.employees
         ]
     }, 200
-
-if __name__ == '__main__':
-    app.run(debug=True)
 
