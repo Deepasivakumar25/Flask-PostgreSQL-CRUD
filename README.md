@@ -1,57 +1,68 @@
 # Flask PostgreSQL CRUD API
 
-A Flask-based REST API project demonstrating CRUD operations, JWT authentication, PostgreSQL database integration, Pydantic validation, and SQLAlchemy ORM.
+A Flask-based REST API project demonstrating CRUD operations with PostgreSQL, Pydantic request validation, JWT authentication, password hashing, and SQLAlchemy ORM.
 
 ## Project Overview
 
-This project contains REST API implementations using Flask and PostgreSQL.
+This project demonstrates how to build REST APIs using Flask with PostgreSQL.
 
-It demonstrates two approaches for working with PostgreSQL:
+It includes two approaches for database operations:
 
-1. Direct database operations using `psycopg`
-2. Database operations using Flask-SQLAlchemy and SQLAlchemy ORM
+1. Direct PostgreSQL operations using `psycopg`
+2. ORM-based database operations using Flask-SQLAlchemy and SQLAlchemy
 
-The project also includes JWT-based authentication to protect API endpoints.
+The project also includes JWT-based authentication for protected API endpoints.
 
 ## Technologies Used
 
-* Python
-* Flask
-* PostgreSQL
-* psycopg
-* Flask-SQLAlchemy
-* SQLAlchemy
-* Pydantic
-* PyJWT
-* Werkzeug
-* python-dotenv
+- Python
+- Flask
+- PostgreSQL
+- psycopg
+- Flask-SQLAlchemy
+- SQLAlchemy
+- Pydantic
+- PyJWT
+- Werkzeug
+- python-dotenv
 
 ## Project Structure
 
 ```text
 Flask-PostgreSQL-CRUD/
 │
-├── products.py
-├── authentication.py
-├── sql_alchemy_products.py
+├── app.py
 ├── db.py
+├── authentication.py
+├── auth_utils.py
+├── products.py
+├── sql_alchemy_products.py
 ├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
 
+### File Responsibilities
+
+- `app.py` - Main Flask application, SQLAlchemy configuration, and application startup.
+- `db.py` - PostgreSQL connection helper using `psycopg`.
+- `authentication.py` - User registration, login, and profile APIs.
+- `auth_utils.py` - JWT authentication and token validation utility.
+- `products.py` - Product CRUD APIs using direct PostgreSQL queries with `psycopg`.
+- `sql_alchemy_products.py` - Product APIs implemented using SQLAlchemy ORM.
+
 ## Features
 
-### Product APIs
+### Product CRUD APIs
 
 The project provides APIs for:
 
-* Get all products
-* Get a product by ID
-* Create a product
-* Update a product
-* Partially update a product
-* Delete a product
+- Get all products
+- Get a product by ID
+- Create a product
+- Update a product
+- Partially update a product
+- Delete a product
 
 ### Authentication
 
@@ -59,47 +70,55 @@ JWT authentication is implemented for protected endpoints.
 
 Authentication features include:
 
-* User registration
-* User login
-* Password hashing
-* JWT token generation
-* JWT token validation
-* Token expiration handling
-* Protected API endpoints
+- User registration
+- User login
+- Password hashing
+- JWT token generation
+- JWT token validation
+- Token expiration handling
+- Protected API endpoints
+
+The JWT stores the authenticated employee ID and is used to identify the user for protected requests.
 
 ### PostgreSQL Integration
 
-The project uses PostgreSQL as the database.
+PostgreSQL is used as the application's database.
 
-Database connection details are loaded using environment variables.
+The project demonstrates two database access approaches:
 
-The `db.py` module uses `psycopg` to establish database connections.
+**Direct PostgreSQL access**
+
+`products.py` uses `psycopg` and SQL queries to perform CRUD operations.
+
+**SQLAlchemy ORM**
+
+`sql_alchemy_products.py` uses Flask-SQLAlchemy and SQLAlchemy models to perform database operations.
+
+Database connection settings are loaded from environment variables.
 
 ### Pydantic Validation
 
-Pydantic models are used to validate request data before performing database operations.
+Pydantic models are used to validate request data before database operations.
 
-Examples include:
+Validation is used for:
 
-* Product creation validation
-* Product update validation
-* Partial product update validation
-* User registration validation
+- User registration
+- Product creation
+- Product updates
+- Partial product updates
 
 ### SQLAlchemy ORM
 
-The project also demonstrates database operations using Flask-SQLAlchemy.
+The SQLAlchemy implementation demonstrates:
 
-SQLAlchemy examples include:
-
-* Creating models
-* Retrieving records by ID
-* Querying all records
-* Filtering records
-* Sorting records
-* Counting records
-* Using `or_()` conditions
-* Working with relationships between tables
+- Defining database models
+- Retrieving records by ID
+- Querying records
+- Filtering records
+- Sorting records
+- Counting records
+- Using `or_()` conditions
+- Working with relationships between tables
 
 ## Environment Variables
 
@@ -117,12 +136,14 @@ JWT_SECRET_KEY=your_secret_key
 
 Do not commit the `.env` file to GitHub.
 
+The `.gitignore` file excludes the `.env` file and Python virtual-environment directories.
+
 ## Installation
 
 Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Deepasivakumar25/Flask-PostgreSQL-CRUD.git
 ```
 
 Navigate to the project directory:
@@ -151,37 +172,43 @@ pip install -r requirements.txt
 
 ## Database Setup
 
-Create a PostgreSQL database and configure the required database tables.
+Create the required PostgreSQL database and tables used by the application.
 
-Update the `.env` file with your PostgreSQL connection details.
+For local development, configure the PostgreSQL connection details in the `.env` file.
+
+The application uses the following database configuration variables:
+
+- `DB_HOST`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_PORT`
 
 ## Running the Application
 
-Run the Flask application:
+The project uses `app.py` as the single Flask application entry point.
 
-```bash
-python products.py
+Activate the virtual environment and run:
+
+```powershell
+flask --app app run --debug
 ```
 
-The application will start on:
+The application will be available at:
 
 ```text
 http://127.0.0.1:5000
 ```
 
-The authentication API can be run separately using:
+You can also start the application directly with:
 
-```bash
-python authentication.py
+```powershell
+python app.py
 ```
 
-The SQLAlchemy product API can be run using:
+The application registers the authentication, direct PostgreSQL, and SQLAlchemy API routes when `app.py` starts.
 
-```bash
-python sql_alchemy_products.py
-```
-
-## Example API Endpoints
+## API Endpoints
 
 ### Authentication
 
@@ -191,7 +218,9 @@ POST /login
 GET  /profile
 ```
 
-### Product APIs
+### Product APIs - Direct PostgreSQL
+
+These endpoints use `psycopg` and SQL queries.
 
 ```text
 GET    /products
@@ -202,7 +231,9 @@ PATCH  /partially_update_product/<product_id>
 DELETE /delete_product/<product_id>
 ```
 
-### SQLAlchemy Product APIs
+### Product APIs - SQLAlchemy
+
+These endpoints use Flask-SQLAlchemy and SQLAlchemy ORM.
 
 ```text
 GET    /sql_products
@@ -213,45 +244,99 @@ PATCH  /sql_partially_update_product/<product_id>
 DELETE /sql_delete_product/<product_id>
 ```
 
-Additional SQLAlchemy ORM examples demonstrate filtering, sorting, counting, and conditional queries.
+Additional SQLAlchemy endpoints demonstrate category filtering, conditional filtering, and product counting:
 
-## Authentication
+```text
+GET /sql_products/<category>
+GET /sql_products_filter
+GET /count_sql_products/<category>
+```
 
-Protected endpoints require a JWT token in the `Authorization` header.
+The project also includes SQLAlchemy examples for querying department and employee relationships.
 
-Example:
+## Authentication Flow
+
+### Register
+
+A user registers with an employee ID, email, and password.
+
+```text
+POST /register
+```
+
+The application:
+
+1. Validates the request using Pydantic.
+2. Checks whether the email already exists.
+3. Verifies that the employee ID exists.
+4. Hashes the password using Werkzeug.
+5. Stores the user in PostgreSQL.
+
+### Login
+
+A registered user sends their email and password:
+
+```text
+POST /login
+```
+
+Example request:
+
+```json
+{
+    "email": "user@example.com",
+    "password": "your_password"
+}
+```
+
+After successful authentication, the API returns a JWT token.
+
+### Accessing Protected Endpoints
+
+The JWT must be sent in the `Authorization` header:
 
 ```text
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-A token is generated after successful login and must be provided when accessing protected endpoints.
+The token is validated before the protected endpoint is executed.
+
+## Example HTTP Status Codes
+
+The API uses standard HTTP status codes, including:
+
+- `200 OK` - Successful request
+- `201 Created` - Resource successfully created
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Missing or invalid authentication
+- `404 Not Found` - Requested resource does not exist
 
 ## Learning Objectives
 
 This project was created to practice and demonstrate:
 
-* Flask REST API development
-* HTTP methods and status codes
-* CRUD operations
-* PostgreSQL integration
-* Database connection handling
-* Pydantic request validation
-* Password hashing
-* JWT authentication
-* SQLAlchemy ORM
-* SQLAlchemy relationships
-* Filtering and sorting with SQLAlchemy
-* Environment variable management
-* Backend API development
+- Flask REST API development
+- HTTP methods and status codes
+- CRUD operations
+- PostgreSQL integration
+- Direct database access with psycopg
+- Pydantic request validation
+- Password hashing
+- JWT authentication
+- Protected API endpoints
+- SQLAlchemy ORM
+- SQLAlchemy relationships
+- Filtering and sorting with SQLAlchemy
+- Environment variable management
+- Backend API development
 
 ## Future Improvements
 
-* Add centralized error handling
-* Add API documentation
-* Improve project structure using Flask Blueprints
-* Add automated tests
-* Add Docker support
-* Add PostgreSQL containerization
-* Improve authentication and authorization
-* Add production configuration
+- Centralized error handling
+- Automated tests
+- API documentation
+- Flask Blueprints
+- Docker support
+- PostgreSQL containerization
+- Improved authentication and authorization
+- Production configuration
